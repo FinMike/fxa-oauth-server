@@ -46,6 +46,7 @@ The currently-defined error responses are:
 | 401 | 111 | unauthorized |
 | 403 | 112 | forbidden |
 | 415 | 113 | invalid content type |
+| 400 | 114 | invalid scopes |
 | 500 | 999 | internal server error |
 
 ## API Endpoints
@@ -340,7 +341,26 @@ particular user.
 
 - `client_id`: The id returned from client registration.
 - `client_secret`: The secret returned from client registration.
-- `code`: A string that was received from the [authorization][] endpoint.
+- `ttl`: (optional) Seconds that this access_token should be valid.
+  
+  Not including this field works so as to not break the v1 contract. It
+  is HIGHLY recommended that you use it. If passed, it or the maximum of
+  100 years, whichever is smaller, will be used, and passed back in the
+  response in the `expires_in` property.
+  
+  In v2, refresh tokens will be mandatory, even if a `ttl` property is
+  not passed. At that point, this property will only be a hint. To
+  prepare for that, not passing a `ttl` will return a `warning`
+  property in the response reminding of this eventual change.
+- `grant_type`: Either the string `authorization_code` or `refresh_token`.
+  - If `authorization_code`:
+    - `code`: A string that was received from the [authorization][] endpoint.
+  - If `refresh_token`:
+    - `refresh_token`: A string that received from the [token][]
+      endpoint specifically as a refresh token.
+    - `scope`: (optional) A subset of scopes provided to this
+      refresh_token originally, to receive an access_token with less
+      permissions.
 
 **Example:**
 
@@ -352,6 +372,8 @@ curl -v \
 -d '{
   "client_id": "5901bd09376fadaa",
   "client_secret": "20c6882ef864d75ad1587c38f9d733c80751d2cbc8614e30202dc3d1d25301ff",
+  "ttl": 3600,
+  "grant_type": "authorization_code",
   "code": "4ab433e31ef3a7cf7c20590f047987922b5c9ceb1faff56f0f8164df053dd94c"
 }'
 ```
@@ -362,6 +384,10 @@ A valid request will return a JSON response with these properties:
 
 - `access_token`: A string that can be used for authorized requests to service providers.
 - `scope`: A string of space-separated permissions that this token has. May differ from requested scopes, since user can deny permissions.
+- `refresh_token`: (Optional) A refresh token to fetch a new access
+  token when this one expires. Only will be present if
+  `grant_type=authorization_code` and `ttl` was passed.
+- `expires_in`: (Optional) **Seconds** until this access token is no longer valid.
 - `token_type`: A string representing the token type. Currently will always be "bearer".
 - `auth_at`: An integer giving the time at which the user authenticated to the Firefox Accounts server when generating this token, as a UTC unix timestamp (i.e.  **seconds since epoch**).
 
@@ -372,6 +398,8 @@ A valid request will return a JSON response with these properties:
   "access_token": "558f9980ad5a9c279beb52123653967342f702e84d3ab34c7f80427a6a37e2c0",
   "scope": "profile:email profile:avatar",
   "token_type": "bearer",
+  "expires_in": 3600,
+  "refresh_token": "58d59cc97c3ca183b3a87a65eec6f93d5be051415b53afbf8491cc4c45dbb0c6",
   "auth_at": 1422336613
 }
 ```

@@ -713,14 +713,14 @@ describe('/v1', function() {
     var badTok;
 
     before(function() {
-      return db.generateToken({
+      return db.generateAccessToken({
         clientId: buf(clientId),
         userId: buf(USERID),
         email: VEMAIL,
         scope: [auth.SCOPE_CLIENT_MANAGEMENT]
       }).then(function(token) {
         tok = token.token.toString('hex');
-        return db.generateToken({
+        return db.generateAccessToken({
           clientId: buf(clientId),
           userId: unique(16),
           email: 'user@not.white.list.ed',
@@ -1078,7 +1078,7 @@ describe('/v1', function() {
   });
 
   describe('/destroy', function() {
-    it('should destroy tokens', function() {
+    it('should destroy access tokens', function() {
       var token;
       return newToken().then(function(res) {
         token = res.result.access_token;
@@ -1090,7 +1090,7 @@ describe('/v1', function() {
         });
       }).then(function(res) {
         assert.equal(res.statusCode, 200);
-        return db.getToken(encrypt.hash(token)).then(function(tok) {
+        return db.getAccessToken(encrypt.hash(token)).then(function(tok) {
           assert.equal(tok, undefined);
         });
       });
